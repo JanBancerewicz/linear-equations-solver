@@ -45,22 +45,22 @@ f=8 # trzecia cyfra
 
 
 
-
-# tworzenie macierzy A
-main_diag = np.diag(np.array([np.float64(a1)]*N), k=0)
-A = main_diag
-
-#a2
-a2_diag_upper =np.diag(np.array([np.float64(a2)]*(N-1)), k=1)
-A += a2_diag_upper
-a2_diag_lower = np.diag(np.array([np.float64(a2)]*(N-1)), k=-1)
-A += a2_diag_lower
-
-#a3
-a3_diag_upper =np.diag(np.array([np.float64(a3)]*(N-2)), k=2)
-A += a3_diag_upper
-a3_diag_lower = np.diag(np.array([np.float64(a3)]*(N-2)), k=-2)
-A += a3_diag_lower
+#
+# # tworzenie macierzy A
+# main_diag = np.diag(np.array([np.float64(a1)]*N), k=0)
+# A = main_diag
+#
+# #a2
+# a2_diag_upper =np.diag(np.array([np.float64(a2)]*(N-1)), k=1)
+# A += a2_diag_upper
+# a2_diag_lower = np.diag(np.array([np.float64(a2)]*(N-1)), k=-1)
+# A += a2_diag_lower
+#
+# #a3
+# a3_diag_upper =np.diag(np.array([np.float64(a3)]*(N-2)), k=2)
+# A += a3_diag_upper
+# a3_diag_lower = np.diag(np.array([np.float64(a3)]*(N-2)), k=-2)
+# A += a3_diag_lower
 
 # print(A)
 
@@ -88,6 +88,14 @@ a3_diag_lower = np.diag(np.array([np.float64(a3)]*(N-2)), k=-2)
 C += a3_diag_lower
 
 # print(C)
+
+def print_things(x, norm, calc_time, N, iters=0, strr=""):
+    print(strr + f" dla N: {N}")
+    print("x = ", x)
+    print("norma = ", norm[-1] if norm.dtype != np.float64 else norm)
+    print("liczba iteracji = ", iters) if iters != 0 else None
+    print("czas wykonania = ", calc_time)
+    print()
 
 
 def jacobi_method(N, A, b, max_iter=1000, min_residuum=1e-9):
@@ -445,29 +453,29 @@ def optimized_lu_solver(A, b):
 
 
 
-#zad3
-x, norm, iters, calc_time = jacobi_method(N, C, b)
-print("JACOBI")
-print("x = ", x)
-print("norma = ", norm[-1])
-print("liczba iteracji = ", iters)
-print("czas wykonania = ", calc_time)
-print()
-
-x, norm, iters, calc_time = gauss_seidel_method(N, C, b)
-print("GAUSS-SEIDEL")
-print("x = ", x)
-print("norma = ", norm[-1])
-print("liczba iteracji = ", iters)
-print("czas wykonania = ", calc_time)
-print()
-
-x, norm, calc_time = lu_solver(N, C, b)
-print("LU")
-print("x = ", x)
-print("norma = ", norm)
-print("czas wykonania = ", calc_time)
-print()
+#zad3 ######################################################## declarations
+# x, norm, iters, calc_time = jacobi_method(N, C, b)
+# print("JACOBI")
+# print("x = ", x)
+# print("norma = ", norm[-1])
+# print("liczba iteracji = ", iters)
+# print("czas wykonania = ", calc_time)
+# print()
+#
+# x, norm, iters, calc_time = gauss_seidel_method(N, C, b)
+# print("GAUSS-SEIDEL")
+# print("x = ", x)
+# print("norma = ", norm[-1])
+# print("liczba iteracji = ", iters)
+# print("czas wykonania = ", calc_time)
+# print()
+#
+# x, norm, calc_time = lu_solver(N, C, b)
+# print("LU")
+# print("x = ", x)
+# print("norma = ", norm)
+# print("czas wykonania = ", calc_time)
+# print()
 
 ###########################################################################
 ##############################   zad3    ##################################
@@ -503,3 +511,212 @@ print()
 # petla: 100 300 500 800 1000 1300 1500 1800 2000 2500 3000 3500 4000
 # zakladajac macierz A => powinny sie zbiegac
 # czasy + rozmiar macierzy w pliku, tyle wystarczy
+
+
+from scipy.linalg import solve_triangular
+
+
+def lu_solver_cheat(N, A, b):
+    start = time.time()
+
+    # 1. Faktoryzacja LU (wersja blokowa bez pivotowania)
+    def block_lu(A, block_size=64):
+        n = A.shape[0]
+        if n <= block_size:
+            L = np.eye(n)
+            U = A.copy()
+            for k in range(n - 1):
+                L[k + 1:, k] = U[k + 1:, k] / U[k, k]
+                U[k + 1:, k:] -= np.outer(L[k + 1:, k], U[k, k:])
+            return L, U
+
+        mid = n // 2
+        A11 = A[:mid, :mid]
+        A12 = A[:mid, mid:]
+        A21 = A[mid:, :mid]
+        A22 = A[mid:, mid:]
+
+        L11, U11 = block_lu(A11)
+        L21 = solve_triangular(U11.T, A21.T).T
+        U12 = solve_triangular(L11, A12)
+        L22, U22 = block_lu(A22 - L21 @ U12)
+
+        L = np.block([[L11, np.zeros_like(A12)], [L21, L22]])
+        U = np.block([[U11, U12], [np.zeros_like(A21), U22]])
+        return L, U
+
+    # 2. Wykonanie faktoryzacji
+    L, U = block_lu(A)
+    P = np.eye(N)  # Macierz permutacji jednostkowa (brak pivotowania)
+
+    # 3. Rozwiązanie układu
+    y = solve_triangular(L, P @ b, lower=True)
+    x = solve_triangular(U, y, lower=False)
+
+    r_norm = np.linalg.norm(A @ x - b)
+    calc_time = time.time() - start
+
+    return x, np.array(r_norm), calc_time
+
+# ####################krde######################
+
+def cholesky_decomposition(A):
+    """
+    Ręczna implementacja faktoryzacji Choleskiego A = LL^T.
+    Zakłada, że macierz jest symetryczna i dodatnio określona.
+    """
+    n = A.shape[0]
+    L = np.zeros_like(A)
+
+    for i in range(n):
+        for j in range(i + 1):
+            s = np.dot(L[i, :j], L[j, :j])
+
+            if i == j:
+                L[i, j] = np.sqrt(A[i, i] - s)
+            else:
+                L[i, j] = (A[i, j] - s) / L[j, j]
+    return L
+
+
+def forward_substitution(L, b):
+    """Ręczne podstawienie w przód (Ly = b)"""
+    n = L.shape[0]
+    y = np.zeros(n)
+
+    for i in range(n):
+        y[i] = (b[i] - np.dot(L[i, :i], y[:i])) / L[i, i]
+    return y
+
+
+def backward_substitution(LT, y):
+    """Ręczne podstawienie wstecz (L^T x = y)"""
+    n = LT.shape[0]
+    x = np.zeros(n)
+
+    for i in range(n - 1, -1, -1):
+        x[i] = (y[i] - np.dot(LT[i, i + 1:], x[i + 1:])) / LT[i, i]
+    return x
+
+
+def lu_solver_new(N, A, b): ################ TODO ZAJEBISTA#########################
+    start = time.time()
+
+
+    # 1. Faktoryzacja Choleskiego
+    # L = cholesky_decomposition(A)
+
+    L = np.zeros_like(A)
+
+    for i in range(N):
+        for j in range(i + 1):
+            s = np.dot(L[i, :j], L[j, :j])
+
+            if i == j:
+                L[i, j] = np.sqrt(A[i, i] - s)
+            else:
+                L[i, j] = (A[i, j] - s) / L[j, j]
+
+
+    # 2. Rozwiązanie układu LL^T x = b
+    # y = solve_triangular(L, b, lower=True)  # Ly = b
+    # x = solve_triangular(L.T, y, lower=False)  # L^T x = y
+
+    # 2. Rozwiązanie układu LL^T x = b
+    y = forward_substitution(L, b)  # Ly = b
+    x = backward_substitution(L.T, y)  # L^T x = y
+
+    r_norm = np.linalg.norm(A @ x - b)
+    calc_time = time.time() - start
+
+    return x, np.array(r_norm), calc_time
+
+
+
+# ########################################
+
+
+
+########################
+
+
+def simulate(N, results, method=0, write=False):
+    # tworzenie macierzy A
+    main_diag = np.diag(np.array([np.float64(a1)] * N), k=0)
+    Asim = main_diag
+    # a2
+    a2_diag_upper = np.diag(np.array([np.float64(a2)] * (N - 1)), k=1)
+    Asim += a2_diag_upper
+    a2_diag_lower = np.diag(np.array([np.float64(a2)] * (N - 1)), k=-1)
+    Asim += a2_diag_lower
+    # a3
+    a3_diag_upper = np.diag(np.array([np.float64(a3)] * (N - 2)), k=2)
+    Asim += a3_diag_upper
+    a3_diag_lower = np.diag(np.array([np.float64(a3)] * (N - 2)), k=-2)
+    Asim += a3_diag_lower
+
+    # tworzenie wektora b
+    bsim = np.array([np.sin(n * (np.float64(f + 1))) for n in range(1, N + 1)])
+
+    # print(b)
+
+    # print(A)
+    # print(A.size)
+    # results =[]
+
+    if method != 2 and method != 3:
+        x, norm, iters, calc_time = jacobi_method(N, Asim, bsim)
+        if write:
+            print_things(x, norm, calc_time, N, iters, strr="jacobi")
+        # zakladamy ze się zbiegnie
+        results.append([N, round(calc_time, 5)])
+
+    if method != 3 and method != 1:
+        x, norm, iters, calc_time = gauss_seidel_method(N, Asim, bsim)
+        if write:
+            print_things(x, norm, calc_time, N, iters, strr="gauss-seidel")
+        results.append([N, round(calc_time, 5)])
+
+    if method != 1 and method != 2:
+        x, norm, calc_time = lu_solver_new(N, Asim, bsim)
+        if write:
+            print_things(x, norm, calc_time, N, 0, strr="lu")
+        results.append([N, round(calc_time, 5)])
+
+    # return results
+
+# petla do symulowania
+# results = []
+#
+# simulate(1299, results, method=0)
+#
+# print(results)
+
+def generate_simulation(method):
+    results1 = []
+    results2 = []
+    results3 = []
+    steps = [100, 300, 500, 800, 1000, 1300, 1500, 1800, 2000, 2500, 3000, 3500, 4000]
+    print("jacobi")
+    for N in steps:
+        simulate(N, results1, 1)
+        print(results1[-1])
+    print("gauss-seidel")
+    for N in steps:
+        simulate(N, results2, 2)
+        print(results2[-1])
+    print("lu")
+    for N in steps:
+        simulate(N, results3, 3)
+        print(results3[-1])
+    return results1, results2, results3
+
+# results1, results2, results3 = generate_simulation(0)
+#
+# print(results1)
+# print(results2)
+# print(results3)
+
+# testujemy LU
+results = []
+simulate(1300, results, method=3, write=True)
