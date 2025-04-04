@@ -5,6 +5,13 @@ import scipy as sp
 import scipy.linalg
 import time
 
+
+from jacobi import jacobi_method
+from gauss_seidel import gauss_seidel_method
+from lu import lu_method, lu_from_library
+
+from old import *
+
 N= 1299
 a1=5
 a2=-1
@@ -14,347 +21,47 @@ d=9 # ostatnia cyfra
 e=0 # czwarta cyfra
 f=8 # trzecia cyfra
 
-
-
-# N= 1258
-# a1=5
-# a2=-1
-# a3=-1
-# c=5
-# d=8
-# e=0
-# f=8
-
-
-
-# układ rownan a1 = 5
-# a2 = -1
-# a3 = -1
-
-# Ax = b
-# rozmiar macierzy: 1299 x 1299
-
-# wartosci b: sin(n · (9))
-
-# generate linear equations:
-# 5 - - 0 0 0 0
-# - 5 - - 0 0 0
-# - - 5 - - 0 0
-# 0 - - 5 - - 0
-# 0 0 - - 5 - -
-
-
-
-#
-# # tworzenie macierzy A
-# main_diag = np.diag(np.array([np.float64(a1)]*N), k=0)
-# A = main_diag
-#
-# #a2
-# a2_diag_upper =np.diag(np.array([np.float64(a2)]*(N-1)), k=1)
-# A += a2_diag_upper
-# a2_diag_lower = np.diag(np.array([np.float64(a2)]*(N-1)), k=-1)
-# A += a2_diag_lower
-#
-# #a3
-# a3_diag_upper =np.diag(np.array([np.float64(a3)]*(N-2)), k=2)
-# A += a3_diag_upper
-# a3_diag_lower = np.diag(np.array([np.float64(a3)]*(N-2)), k=-2)
-# A += a3_diag_lower
-
-# print(A)
-
 # tworzenie wektora b
 b = np.array( [np.sin(n*(np.float64(f+1))) for n in range(1, N+1)] )
 
-# print(b)
+
+def generate_matrix(N, new_a1=a1, new_a2=a2, new_a3=a3):
+
+    # tworzenie macierzy A
+    main_diag = np.diag(np.array([np.float64(a1)]*N), k=0)
+    A = main_diag
+
+    # a2
+    a2_diag_upper = np.diag(np.array([np.float64(a2)]*(N-1)), k=1)
+    A += a2_diag_upper
+    a2_diag_lower = np.diag(np.array([np.float64(a2)]*(N-1)), k=-1)
+    A += a2_diag_lower
+
+    # a3
+    a3_diag_upper = np.diag(np.array([np.float64(a3)]*(N-2)), k=2)
+    A += a3_diag_upper
+    a3_diag_lower = np.diag(np.array([np.float64(a3)]*(N-2)), k=-2)
+    A += a3_diag_lower
+
+    return A
 
 
-# tworzenie macierzy C
-a1c = 3
-main_diag = np.diag(np.array([np.float64(a1c)]*N), k=0)
-C = main_diag
 
-#c2
-c2_diag_upper =np.diag(np.array([np.float64(a2)]*(N-1)), k=1)
-C += c2_diag_upper
-a2_diag_lower = np.diag(np.array([np.float64(a2)]*(N-1)), k=-1)
-C += a2_diag_lower
-
-#a3
-a3_diag_upper =np.diag(np.array([np.float64(a3)]*(N-2)), k=2)
-C += a3_diag_upper
-a3_diag_lower = np.diag(np.array([np.float64(a3)]*(N-2)), k=-2)
-C += a3_diag_lower
-
-# print(C)
 
 def print_things(x, norm, calc_time, N, iters=0, strr=""):
     print(strr + f" dla N: {N}")
     print("x = ", x)
-    print("norma = ", norm[-1] if norm.dtype != np.float64 else norm)
+    if norm.dtype == np.float64 and norm.size > 1:
+        print("norma = ", norm[-1])
+    else:
+        print("norma = ", norm)
     print("liczba iteracji = ", iters) if iters != 0 else None
     print("czas wykonania = ", calc_time)
     print()
 
 
-def jacobi_method(N, A, b, max_iter=1000, min_residuum=1e-9):
-    start = time.time()
-    x = np.ones(N, dtype=np.float64)
-
-    D = np.diag(np.diag(A))  # macierz diagonalna
-    L = np.tril(A, k=-1)  # macierz trójkątna dolna
-    U = np.triu(A, k=1)  # macierz trójkątna górna
-
-    D_inv = np.diag(1.0 / np.diag(D))  # odwrotność D, czyli odwrotność każdego elementu na diagonali
-    M = -D_inv @ (L + U)  # macierz iteracyjna
-    w = D_inv @ b  # wektor iteracyjny
-
-    residuum = A @ x - b
-    inorm = np.linalg.norm(residuum)
-    r_norm = [inorm]
-    iters = 0
-
-    while inorm > min_residuum and iters < max_iter:
-        # iteracja Jacobiego: x = Mx + w
-        x = M @ x + w
-        residuum = A @ x - b
-        inorm = np.linalg.norm(residuum)
-        r_norm.append(inorm)
-        iters += 1
-
-    calc_time = time.time() - start
-    return x, np.array(r_norm), iters, calc_time
 
 
-def gauss_seidel_method_good(N, A, b, max_iter=1000, min_residuum=1e-9):
-    start = time.time()
-    x = np.ones(N, dtype=np.float64)  # Wymuszamy float64
-
-    # Rozkład macierzy A = L + D + U
-    U = np.triu(A, k=1)
-    L_D = np.tril(A)  # L + D (trójkąt dolny z diagonalą)
-
-    # Inicjalizacja normy residuum
-    residuum = A @ x - b
-    inorm = np.linalg.norm(residuum)
-    r_norm = [inorm]
-    iters = 0
-
-    while inorm > min_residuum and iters < max_iter:
-        # Iteracja Gaussa-Seidla: x = (L + D)^{-1} @ (b - U @ x)
-        for i in range(N): # podstawienie w przód
-            sum_ = np.dot(A[i, :i], x[:i]) + np.dot(A[i, i + 1:], x[i + 1:])
-            x[i] = (b[i] - sum_) / A[i, i]
-
-        residuum = A @ x - b
-        inorm = np.linalg.norm(residuum)
-        r_norm.append(inorm)
-        iters += 1
-
-    calc_time = time.time() - start
-    return x, np.array(r_norm), iters, calc_time
-
-
-def gauss_seidel_method_slow(N, A, b, max_iter=1000, min_residuum=1e-9):
-    start = time.time()
-    x = np.ones(N)
-
-    D = np.diag(np.diag(A))
-    U = np.triu(A, k=1)
-    L = np.tril(A, k=-1)
-
-    # Macierz T = D + L oraz wektor w = T^{-1}b
-    T = D + L
-
-    # liczenie normy residuum
-    residuum = A @ x - b
-    inorm = np.linalg.norm(residuum)
-    r_norm = [inorm]
-    iters = 0
-
-    while ( inorm > min_residuum and iters < max_iter ):
-        # Iteracja Gaussa-Seidla: x = T^{-1}(-Ux + b)
-        x = np.linalg.solve(T, -U @ x + b)
-        residuum = A @ x - b
-        inorm = np.linalg.norm(residuum)
-        r_norm.append(inorm)
-        iters += 1
-
-    calc_time = time.time() - start
-
-    return x, np.array(r_norm), iters, calc_time
-
-
-def gauss_seidel_method(N, A, b, max_iter=1000, min_residuum=1e-9):
-    start = time.time()
-    x = np.ones(N, dtype=np.float64)
-
-    # wyznaczanie U i L+D
-    U = np.triu(A, k=1)
-    L_D = np.tril(A)  # L + D (trójkąt dolny z diagonalą)
-
-    residuum = A @ x - b # liczenie residuum
-    inorm = np.linalg.norm(residuum)
-    r_norm = [inorm]
-    iters = 0
-
-    while inorm > min_residuum and iters < max_iter:
-        # iteracja Gaussa-Seidla: x = (L + D)^{-1} @ (b - U @ x)
-        right_side = b - U @ x  # prawa strona rownania
-        x_new = np.zeros(N)
-
-        for i in range(N): # podstawienie w przód - rozwiazanie układu równań
-            x_new[i] = (right_side[i] - np.dot(L_D[i, :i], x_new[:i])) / L_D[i, i]
-        x = x_new
-
-
-        residuum = A @ x - b
-        inorm = np.linalg.norm(residuum)
-        r_norm.append(inorm)
-        iters += 1
-
-    calc_time = time.time() - start
-    return x, np.array(r_norm), iters, calc_time
-
-
-def lu_solver_illegal(N, A, b):
-    start = time.time()
-    P, L, U = scipy.linalg.lu(A)  # Faktoryzacja LU
-
-    # Rozwiązanie układu równań przy użyciu podstawiania w przód i wstecz
-    y = scipy.linalg.solve_triangular(L, P @ b, lower=True)
-    x = scipy.linalg.solve_triangular(U, y, lower=False)
-
-    r_norm = np.linalg.norm(A @ x - b) # norma residuum
-    calc_time = time.time() - start
-
-    return x, np.array(r_norm), calc_time
-
-
-############## git solver ###################
-def lu_solver(N, A, b):
-    start = time.time()
-    A = A.astype(np.float64, copy=True)  # Kopia robocza
-    P = np.arange(N)  # Wektor permutacji zamiast pełnej macierzy
-
-    # Rozkład LU z pivotingiem
-    for k in range(N - 1):
-        # Wybór elementu głównego
-        pivot = np.argmax(np.abs(A[k:, k])) + k
-        if pivot != k:
-            A[[k, pivot]] = A[[pivot, k]]  # Zamiana wierszy
-            P[[k, pivot]] = P[[pivot, k]]  # Śledzenie permutacji
-            b[[k, pivot]] = b[[pivot, k]]  # Równoczesna zamiana w b
-
-        # Eliminacja Gaussa
-        A[(k + 1):, k] /= A[k, k]
-        A[(k + 1):, (k + 1):] -= np.outer(A[(k + 1):, k], A[k, (k + 1):])
-
-    # Rozdzielenie L i U z pojedynczej macierzy A
-    L = np.tril(A, -1) + np.eye(N)
-    U = np.triu(A)
-
-    # Rozwiązanie Ly = Pb (podstawienie w przód)
-    y = np.zeros(N)
-    for i in range(N):
-        y[i] = b[i] - L[i, :i] @ y[:i]
-
-    # Rozwiązanie Ux = y (podstawienie wstecz)
-    x = np.zeros(N)
-    for i in range(N - 1, -1, -1):
-        x[i] = (y[i] - U[i, i + 1:] @ x[i + 1:]) / U[i, i]
-
-    # Obliczenie normy residuum
-    residuum = A @ x - b
-    r_norm = np.linalg.norm(residuum)
-    calc_time = time.time() - start
-    return x, r_norm, calc_time
-
-
-##################################### second #################################
-
-def lu_solver_optimized(A, b): # ten najlepszy i guess kurde
-    """Ultra-fast LU solver with partial pivoting (pure NumPy)"""
-    start_time = time.time()
-    n = A.shape[0]
-    A = A.astype(np.float64)  # Konwersja typu
-    b = b.astype(np.float64)
-    P = np.arange(n)  # Wektor permutacji
-
-    # Rozkład LU z częściowym wyborem elementu głównego
-    for k in range(n - 1):
-        # Znajdź pivot (największy element w kolumnie)
-        max_row = k + np.argmax(np.abs(A[k:, k]))
-
-        # Zamiana wierszy jeśli potrzebne
-        if max_row != k:
-            A[[k, max_row]] = A[[max_row, k]]  # Zamiana wierszy w A
-            P[[k, max_row]] = P[[max_row, k]]  # Aktualizacja permutacji
-            b[[k, max_row]] = b[[max_row, k]]  # Zamiana w wektorze b
-
-        # Eliminacja Gaussa (zoptymalizowana wersja)
-        pivot = A[k, k]
-        A[k + 1:, k] /= pivot
-        A[k + 1:, k + 1:] -= A[k + 1:, k:k + 1] * A[k:k + 1, k + 1:]
-
-    # Rozwiązanie Ly = Pb (podstawienie w przód)
-    y = np.empty(n, dtype=np.float64)
-    for i in range(n):
-        y[i] = b[i] - np.dot(A[i, :i], y[:i])
-
-    # Rozwiązanie Ux = y (podstawienie wstecz)
-    x = np.empty(n, dtype=np.float64)
-    for i in range(n - 1, -1, -1):
-        x[i] = (y[i] - np.dot(A[i, i + 1:], x[i + 1:])) / A[i, i]
-
-    # Obliczenie normy residuum
-    residuum = np.dot(A, x) - b
-    r_norm = np.sqrt(np.dot(residuum, residuum))  # Szybsze niż np.linalg.norm
-
-    total_time = time.time() - start_time
-    return x, r_norm, total_time
-
-####################################### teraz zadziala ########
-def optimized_lu_solver(A, b):
-    start = time.time()
-    """Optymalizowana metoda LU z częściowym wyborem elementu głównego"""
-    n = A.shape[0]
-    A = A.astype(np.float64)  # Tylko konwersja typu
-    b = b.astype(np.float64)
-    P = np.arange(n)
-
-    # Rozkład LU
-    for k in range(n - 1):
-        # Wybór pivota
-        pivot = k + np.argmax(np.abs(A[k:, k]))
-        if pivot != k:
-            A[[k, pivot]] = A[[pivot, k]]
-            P[k], P[pivot] = P[pivot], P[k]
-            b[k], b[pivot] = b[pivot], P[k]
-
-        # Eliminacja Gaussa
-        pivot_inv = 1.0 / A[k, k]
-        A[k + 1:, k] *= pivot_inv
-        for i in range(k + 1, n):
-            A[i, k + 1:] -= A[i, k] * A[k, k + 1:]
-
-    # Rozwiązanie Ly = Pb
-    y = np.zeros(n)
-    for i in range(n):
-        y[i] = b[i] - np.dot(A[i, :i], y[:i])
-
-    # Rozwiązanie Ux = y
-    x = np.zeros(n)
-    for i in reversed(range(n)):
-        x[i] = (y[i] - np.dot(A[i, i + 1:], x[i + 1:])) / A[i, i]
-
-    # Norma residuum
-    residuum = np.dot(A, x) - b
-    r_norm = np.linalg.norm(residuum)
-
-    calc_time = time.time() - start
-    return x, r_norm, calc_time
 
 ###########
 ###########
@@ -504,7 +211,7 @@ def optimized_lu_solver(A, b):
 
 ###########################################################################
 ##############################   zad5    ##################################
-###########################################################################
+########################################################################### #
 
 # trzy odpalenia, dla kazdej metody => 3 pliki
 
@@ -513,210 +220,133 @@ def optimized_lu_solver(A, b):
 # czasy + rozmiar macierzy w pliku, tyle wystarczy
 
 
-from scipy.linalg import solve_triangular
+############################################ TESTUJE TU #######################
 
+def simulate(N, method=0, matrix="A", write=False, nametag=""):
+    if matrix == "C": # zasymuluj macierz C
+        a1 = 3
+    else:
+        a1 = 5
 
-def lu_solver_cheat(N, A, b):
-    start = time.time()
-
-    # 1. Faktoryzacja LU (wersja blokowa bez pivotowania)
-    def block_lu(A, block_size=64):
-        n = A.shape[0]
-        if n <= block_size:
-            L = np.eye(n)
-            U = A.copy()
-            for k in range(n - 1):
-                L[k + 1:, k] = U[k + 1:, k] / U[k, k]
-                U[k + 1:, k:] -= np.outer(L[k + 1:, k], U[k, k:])
-            return L, U
-
-        mid = n // 2
-        A11 = A[:mid, :mid]
-        A12 = A[:mid, mid:]
-        A21 = A[mid:, :mid]
-        A22 = A[mid:, mid:]
-
-        L11, U11 = block_lu(A11)
-        L21 = solve_triangular(U11.T, A21.T).T
-        U12 = solve_triangular(L11, A12)
-        L22, U22 = block_lu(A22 - L21 @ U12)
-
-        L = np.block([[L11, np.zeros_like(A12)], [L21, L22]])
-        U = np.block([[U11, U12], [np.zeros_like(A21), U22]])
-        return L, U
-
-    # 2. Wykonanie faktoryzacji
-    L, U = block_lu(A)
-    P = np.eye(N)  # Macierz permutacji jednostkowa (brak pivotowania)
-
-    # 3. Rozwiązanie układu
-    y = solve_triangular(L, P @ b, lower=True)
-    x = solve_triangular(U, y, lower=False)
-
-    r_norm = np.linalg.norm(A @ x - b)
-    calc_time = time.time() - start
-
-    return x, np.array(r_norm), calc_time
-
-# ####################krde######################
-
-def cholesky_decomposition(A):
-    """
-    Ręczna implementacja faktoryzacji Choleskiego A = LL^T.
-    Zakłada, że macierz jest symetryczna i dodatnio określona.
-    """
-    n = A.shape[0]
-    L = np.zeros_like(A)
-
-    for i in range(n):
-        for j in range(i + 1):
-            s = np.dot(L[i, :j], L[j, :j])
-
-            if i == j:
-                L[i, j] = np.sqrt(A[i, i] - s)
-            else:
-                L[i, j] = (A[i, j] - s) / L[j, j]
-    return L
-
-
-def forward_substitution(L, b):
-    """Ręczne podstawienie w przód (Ly = b)"""
-    n = L.shape[0]
-    y = np.zeros(n)
-
-    for i in range(n):
-        y[i] = (b[i] - np.dot(L[i, :i], y[:i])) / L[i, i]
-    return y
-
-
-def backward_substitution(LT, y):
-    """Ręczne podstawienie wstecz (L^T x = y)"""
-    n = LT.shape[0]
-    x = np.zeros(n)
-
-    for i in range(n - 1, -1, -1):
-        x[i] = (y[i] - np.dot(LT[i, i + 1:], x[i + 1:])) / LT[i, i]
-    return x
-
-
-def lu_solver_new(N, A, b): ################ TODO ZAJEBISTA#########################
-    start = time.time()
-
-
-    # 1. Faktoryzacja Choleskiego
-    # L = cholesky_decomposition(A)
-
-    L = np.zeros_like(A)
-
-    for i in range(N):
-        for j in range(i + 1):
-            s = np.dot(L[i, :j], L[j, :j])
-
-            if i == j:
-                L[i, j] = np.sqrt(A[i, i] - s)
-            else:
-                L[i, j] = (A[i, j] - s) / L[j, j]
-
-
-    # 2. Rozwiązanie układu LL^T x = b
-    # y = solve_triangular(L, b, lower=True)  # Ly = b
-    # x = solve_triangular(L.T, y, lower=False)  # L^T x = y
-
-    # 2. Rozwiązanie układu LL^T x = b
-    y = forward_substitution(L, b)  # Ly = b
-    x = backward_substitution(L.T, y)  # L^T x = y
-
-    r_norm = np.linalg.norm(A @ x - b)
-    calc_time = time.time() - start
-
-    return x, np.array(r_norm), calc_time
-
-
-
-# ########################################
-
-
-
-########################
-
-
-def simulate(N, results, method=0, write=False):
-    # tworzenie macierzy A
-    main_diag = np.diag(np.array([np.float64(a1)] * N), k=0)
-    Asim = main_diag
-    # a2
-    a2_diag_upper = np.diag(np.array([np.float64(a2)] * (N - 1)), k=1)
-    Asim += a2_diag_upper
-    a2_diag_lower = np.diag(np.array([np.float64(a2)] * (N - 1)), k=-1)
-    Asim += a2_diag_lower
-    # a3
-    a3_diag_upper = np.diag(np.array([np.float64(a3)] * (N - 2)), k=2)
-    Asim += a3_diag_upper
-    a3_diag_lower = np.diag(np.array([np.float64(a3)] * (N - 2)), k=-2)
-    Asim += a3_diag_lower
+    Asim = generate_matrix(N, new_a1=a1, new_a2=a2, new_a3=a3) # generowanie macierzy A
 
     # tworzenie wektora b
     bsim = np.array([np.sin(n * (np.float64(f + 1))) for n in range(1, N + 1)])
-
     # print(b)
-
-    # print(A)
-    # print(A.size)
-    # results =[]
 
     if method != 2 and method != 3:
         x, norm, iters, calc_time = jacobi_method(N, Asim, bsim)
         if write:
             print_things(x, norm, calc_time, N, iters, strr="jacobi")
-        # zakladamy ze się zbiegnie
-        results.append([N, round(calc_time, 5)])
+            f1 = open("data/jacobi_norm"+nametag+".txt", "w")
+            for item in norm:
+                f1.write("%s\n" % item)
+            f1.close()
+
+            f2 = open("data/jacobi_solve.txt"+nametag+".txt", "w")
+            f2.write("iters: " + str(iters) + "\t"+"time: " + str(round(calc_time, 5)) +"\n")
+            for item in x:
+                f2.write("%s\n" % item)
+            f2.close()
+
 
     if method != 3 and method != 1:
         x, norm, iters, calc_time = gauss_seidel_method(N, Asim, bsim)
         if write:
             print_things(x, norm, calc_time, N, iters, strr="gauss-seidel")
-        results.append([N, round(calc_time, 5)])
+            f1 = open("data/gauss_seidel_norm"+nametag+".txt", "w")
+            for item in norm:
+                f1.write("%s\n" % item)
+            f1.close()
+
+            f2 = open("data/gauss_seidel_solve"+nametag+".txt", "w")
+            f2.write("iters: " + str(iters) + "\t" + "time: " + str(round(calc_time, 5)) + "\n")
+            for item in x:
+                f2.write("%s\n" % item)
+            f2.close()
+
 
     if method != 1 and method != 2:
-        x, norm, calc_time = lu_solver_new(N, Asim, bsim)
-        if write:
-            print_things(x, norm, calc_time, N, 0, strr="lu")
-        results.append([N, round(calc_time, 5)])
+        if nametag == "_library":
+            x, norm, calc_time = lu_from_library(N, Asim, bsim) # test wbudowanego lu dla porównania
+            if write:
+                print_things(x, norm, calc_time, N, 0, strr="wbudowany lu")
+        elif nametag == "_optimized":
+            x, norm, calc_time = lu_method(N, Asim, bsim, banded_matrix_optimalization=True)
+            if write:
+                print_things(x, norm, calc_time, N, 0, strr="zoptymalizowany lu")
+        else:
+            x, norm, calc_time = lu_method(N, Asim, bsim)
+            if write:
+                print_things(x, norm, calc_time, N, 0, strr="lu")
 
-    # return results
 
-# petla do symulowania
-# results = []
-#
-# simulate(1299, results, method=0)
-#
-# print(results)
+
+                # f1 = open("data/lu_solve"+nametag+".txt", "w")
+                # f1.write("norm: " + str(norm) + "\t" + "time: " + str(round(calc_time, 5)) + "\n")
+                # for item in x:
+                #     f1.write("%s\n" % item)
+                # f1.close()
+    return None
+
 
 def generate_simulation(method):
-    results1 = []
-    results2 = []
-    results3 = []
+
     steps = [100, 300, 500, 800, 1000, 1300, 1500, 1800, 2000, 2500, 3000, 3500, 4000]
     print("jacobi")
     for N in steps:
-        simulate(N, results1, 1)
-        print(results1[-1])
+        simulate(N, 1)
+        print()
     print("gauss-seidel")
     for N in steps:
-        simulate(N, results2, 2)
-        print(results2[-1])
+        simulate(N, 2)
+        print()
     print("lu")
     for N in steps:
-        simulate(N, results3, 3)
-        print(results3[-1])
-    return results1, results2, results3
+        simulate(N, 3)
+        print()
+    return None
 
-# results1, results2, results3 = generate_simulation(0)
-#
-# print(results1)
-# print(results2)
-# print(results3)
 
-# testujemy LU
-results = []
-simulate(1300, results, method=3, write=True)
+simulate(2000, method=3,matrix="C", write=True, nametag="_optimized")
+simulate(2000, method=3,matrix="C", write=True, nametag="_library")
+simulate(2000, method=3,matrix="C", write=True, nametag="_full")
+# lu dla N: 3000
+# x =  [ 0.09197091 -0.13146997  0.17920602 ...  0.18056721 -0.14733794
+#   0.1894214 ]
+# norma =  4.936378088847448e-15
+# czas wykonania =  43.80000710487366
+
+# simulate(3000, method=3, write=True, nametag="_illegal")
+
+
+
+
+
+######################### ZAD A ###########################
+# print(A)
+# print(f"b = {b}")
+
+
+######################## ZAD B ###########################
+# simulate(1299, method=1, write=True, nametag="_A")
+# simulate(1299, method=2, write=True, nametag="_A")
+# simulate(1299, method=3, write=True, nametag="_A")
+
+# print(f"dokładne rozwiązanie: {np.linalg.solve(A, b)}")=
+
+###################### ZAD C i D #########################
+# simulate(1299, method=1, write=True, nametag="_C")
+# simulate(1299, method=2, write=True, nametag="_C")
+# simulate(1299, method=3, write=True, nametag="_C")
+
+
+
+######################### ZAD D ###########################
+
+
+
+######################### ZAD E ###########################
+
+
+
