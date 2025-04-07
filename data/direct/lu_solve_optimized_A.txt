@@ -1,4 +1,4 @@
-Optimized LU method for N: 1299 and matrix A;	norm: 2.5950423939453667e-15;	time: 0.024
+Optimized LU method for N: 1299 and matrix A;	norm: 2.5950423939453667e-15;	time: 0.02302
 0.09197090797773724
 -0.1314699678074645
 0.17920602245439415

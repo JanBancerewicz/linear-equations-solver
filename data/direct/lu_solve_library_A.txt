@@ -1,4 +1,4 @@
-[Reference only] Built-in scipy.linalg.lu() method for N: 1299 and matrix A;	norm: 2.582830683356351e-15;	time: 0.161
+[Reference only] Built-in scipy.linalg.lu() method for N: 1299 and matrix A;	norm: 2.582830683356351e-15;	time: 0.05261
 0.09197090797773726
 -0.13146996780746448
 0.17920602245439415

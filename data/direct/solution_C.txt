@@ -1,4 +1,4 @@
-[Reference only] Direct solution from numpy.linalg.solve() for N: 1299 and matrix C;	norm: 4.777400335200362e-15;	time: 0.039
+[Reference only] Direct solution from numpy.linalg.solve() for N: 1299 and matrix C;	norm: 4.777400335200362e-15;	time: 0.04193
 0.07222211902080021
 -0.326403966186592
 0.13095183800723603

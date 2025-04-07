@@ -4,7 +4,7 @@ import scipy.linalg
 
 
 def lu_from_library(N, A, b):
-    start = time.time()
+    start = time.perf_counter()
     P, L, U = scipy.linalg.lu(A)  # przeprowadzenie faktoryzacji LU za pomocą wbudowanej funkcji dla porównania z własną implementacją
 
 
@@ -14,9 +14,8 @@ def lu_from_library(N, A, b):
 
 
     r_norm = np.linalg.norm(A @ x - b) # liczenie normy residuum
-    calc_time = time.time() - start
-
-
+    end = time.perf_counter()
+    calc_time = end - start
 
     return x, np.array(r_norm), calc_time
 

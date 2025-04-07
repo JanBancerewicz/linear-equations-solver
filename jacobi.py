@@ -16,7 +16,7 @@ def jacobi_method(N, A, b, max_iter=1000, min_residuum=1e-9):
     residuum = A @ x - b
     inorm = np.linalg.norm(residuum)
     r_norm = [inorm]
-    iters = 0
+    iters = 1
 
     while inorm > min_residuum and iters < max_iter:
         # iteracja Jacobiego: x = Mx + w

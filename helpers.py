@@ -40,7 +40,7 @@ def print_things(x, norm, calc_time, N, iters=0, strr="", matrix="A"):
     print()
 
 
-def solve_direct(N, matrix="A", write=True):
+def solve_direct(N, matrix="A", write=False):
     if matrix == "C": # zasymuluj macierz C
         a1 = 3
     else:
@@ -49,10 +49,11 @@ def solve_direct(N, matrix="A", write=True):
     A = generate_matrix(N, a1)
     b = np.array([np.sin(n * (np.float64(f + 1))) for n in range(1, N+1)])
 
-    start = time.time()
+    start = time.perf_counter()
     x = np.linalg.solve(A, b)
-    calc_time = time.time() - start
     norm = np.linalg.norm(A @ x - b) # liczenie normy residuum
+    end = time.perf_counter()
+    calc_time = end - start
     if write:
         print(f"dokladne rozwiazanie dla N: {N} oraz macierzy {matrix}")
         print("x = ", x)
@@ -62,9 +63,11 @@ def solve_direct(N, matrix="A", write=True):
 
         f1 = open("data/direct/solution"+ "_"+ matrix+".txt", "w")
         f1.write(f"[Reference only] Direct solution from numpy.linalg.solve() for N: {N} and matrix {matrix};\t")
-        f1.write("norm: " + str(norm) + ";\t" + "time: " + str(round(calc_time, 5)) + "\n")
+        if round(calc_time, 5) != 0.0:
+            calc_time= round(calc_time, 5)
+        f1.write("norm: " + str(norm) + ";\t" + "time: " + str(calc_time) + "\n")
         for item in x:
             f1.write("%s\n" % item)
         f1.close()
 
-    return x
+    return x, norm, calc_time

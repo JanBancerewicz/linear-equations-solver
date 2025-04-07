@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import scipy as sp
 import scipy.linalg
+import csv
 import time
 
 
@@ -13,6 +13,8 @@ from lu import lu_method, lu_from_library
 from helpers import generate_matrix, print_things, solve_direct
 
 from parameters import a1, a2, a3, f, N
+
+from plotting import *
 
 
 np.set_printoptions(threshold=20) # ustawienie limitu na 20 elementów podczas wyświetlania tablicy
@@ -203,7 +205,7 @@ def simulate(N, method=0, matrix="A", write=False, nametag=""):
             for item in x:
                 f2.write("%s\n" % item)
             f2.close()
-        plotresults.append([norm, calc_time, iters])
+        plotresults.append([norm, calc_time])
 
     if method == 2:
         x, norm, iters, calc_time = gauss_seidel_method(N, Asim, bsim)
@@ -220,7 +222,7 @@ def simulate(N, method=0, matrix="A", write=False, nametag=""):
             for item in x:
                 f2.write("%s\n" % item)
             f2.close()
-        plotresults.append([norm, calc_time, iters])
+        plotresults.append([norm, calc_time])
 
 
     if method == 3:
@@ -231,11 +233,13 @@ def simulate(N, method=0, matrix="A", write=False, nametag=""):
 
                 f1 = open("data/direct/lu_solve" + nametag + "_" + matrix + ".txt", "w")
                 f1.write(f"[Reference only] Built-in scipy.linalg.lu() method for N: {N} and matrix {matrix};\t")
-                f1.write("norm: " + str(norm) + ";\t" + "time: " + str(round(calc_time, 5)) + "\n")
+                if round(calc_time, 5) != 0.0:
+                    calc_time = round(calc_time, 5)
+                f1.write("norm: " + str(norm) + ";\t" + "time: " + str(calc_time) + "\n")
                 for item in x:
                     f1.write("%s\n" % item)
                 f1.close()
-            plotresults.append([norm, calc_time, 0])
+            plotresults.append([norm, calc_time])
 
         elif nametag == "_optimized":
             x, norm, calc_time = lu_method(N, Asim, bsim, banded_matrix_optimalization=True)
@@ -248,7 +252,7 @@ def simulate(N, method=0, matrix="A", write=False, nametag=""):
                 for item in x:
                     f2.write("%s\n" % item)
                 f2.close()
-            plotresults.append([norm, calc_time, 0])
+            plotresults.append([norm, calc_time])
 
         else: #full
             x, norm, calc_time = lu_method(N, Asim, bsim)
@@ -261,67 +265,94 @@ def simulate(N, method=0, matrix="A", write=False, nametag=""):
                 for item in x:
                     f3.write("%s\n" % item)
                 f3.close()
-            plotresults.append([norm, calc_time, 0])
+            plotresults.append([norm, calc_time])
 
-    return plotresults # norma, czas, liczba iteracji
+    norm, calc_time = plotresults[0]
+    return norm, calc_time # norma, czas, liczba iteracji
 
 
 def generate_simulation():
+    # dla macierzy A - zakladamy ze sie zbiega kazda z 6 metod
+    steps = [100, 300, 500, 800, 1000, 1300, 1500, 1800, 2000, 2500, 3000, 3500]
 
-    steps = [100, 300, 500, 800, 1000, 1300, 1500, 1800, 2000, 2500, 3000, 3500, 4000]
-    print("jacobi")
-    for size in steps:
-        values = simulate(size, 1)
-        norm, calc_time, iters = values[0]
-        print(norm[-1], calc_time, iters, size)
-    print("gauss-seidel")
-    for size in steps:
-        values = simulate(size, 2)
-        norm, calc_time, iters = values[0]
-        print(norm[-1], calc_time, iters, size)
-    print("lu")
-    for size in steps:
-        values = simulate(size, 3, nametag="_optimized")
-        norm, calc_time, iters = values[0]
-        print(norm, calc_time, iters, size)
-    return None
+    with open("data/full_simulation.csv", "w", newline='') as f:
+        writer = csv.writer(f, delimiter=';')
 
+        # Nagłówek
+        writer.writerow(["size", "jacobi", "gauss-seidel", "optimized_lu", "full_lu", "sp_linalg_lu", "np_linalg_solve"])
 
+        for size in steps:
+            buffer = [size]
+            print()
+            norm, calc_time1 = simulate(size, 1)
+            print("jacobi", size, calc_time1, norm[-1])
+            buffer.append(round(calc_time1, 8))
+
+            norm, calc_time2 = simulate(size, 2)
+            print("gauss-seidel", size, calc_time2, norm[-1])
+            buffer.append(round(calc_time2, 8))
+
+            norm, calc_time3 = simulate(size, 3, nametag="_optimized")
+            print("optimized_lu", size, calc_time3, norm)
+            buffer.append(round(calc_time3, 8))
+
+            norm, calc_time4 = simulate(size, 3, nametag="_full")
+            print("full_lu", size, calc_time4, norm)
+            buffer.append(round(calc_time4, 8))
+
+            norm, calc_time5 = simulate(size, 3, nametag="_library")
+            print("sp.linalg.lu()", size, calc_time5, norm)
+            buffer.append(calc_time5)
+
+            x, norm, calc_time6 = solve_direct(size, matrix="A", write=False)
+            print("np.linalg.solve()", size, calc_time6, norm)
+            buffer.append(calc_time6)
+
+            # Zapisz wiersz do pliku
+            writer.writerow(buffer)
+    print("Zapisano dane do pliku data/full_simulation.csv")
 
 
 # print("\n######################### ZAD A ###########################\n")
 # print(generate_matrix(N)) #defaultowo "A"
-
+# print(generate_matrix(N,3)) #defaultowo "C"
+#
 # b = np.array( [np.sin(n*(np.float64(f+1))) for n in range(1, N+1)] )
 # print(f"b = {b}")
 
 
 print("\n######################## ZAD B ###########################\n")
-# simulate(1299, method=1,matrix="A", write=True)
-# simulate(1299, method=2,matrix="A", write=True)
-#
-# simulate(1299, method=3,matrix="A", write=True, nametag="_optimized")
-# simulate(1299, method=3,matrix="A", write=True, nametag="_library")
-# simulate(1299, method=3,matrix="A", write=True, nametag="_full")
-#
-#
-# solve_direct(1299, matrix="A", write=True)
+norm_j, time_j = simulate(1299, method=1,matrix="A", write=True)
+norm_gs, time_gs = simulate(1299, method=2,matrix="A", write=True)
+
+plot_norms_iterative(norm_j, norm_gs, label="A", show=False)
+
+simulate(1299, method=3,matrix="A", write=True, nametag="_optimized")
+simulate(1299, method=3,matrix="A", write=True, nametag="_library")
+simulate(1299, method=3,matrix="A", write=True, nametag="_full")
+
+
+solve_direct(1299, matrix="A", write=True)
 
 
 print("\n###################### ZAD C i D #########################\n")
-# simulate(1299, method=1,matrix="C", write=True)
-# simulate(1299, method=2,matrix="C", write=True)
-#
-# simulate(1299, method=3,matrix="C", write=True, nametag="_optimized")
-# simulate(1299, method=3,matrix="C", write=True, nametag="_library")
-# simulate(1299, method=3,matrix="C", write=True, nametag="_full")
-#
-#
-# solve_direct(1299, matrix="C", write=True)
+norm_j_C, time_j_C = simulate(1299, method=1,matrix="C", write=True)
+norm_gs_C, time_gs_C = simulate(1299, method=2,matrix="C", write=True)
+
+plot_norms_iterative(norm_j_C, norm_gs_C, label="C", show=False)
+
+simulate(1299, method=3,matrix="C", write=True, nametag="_optimized")
+simulate(1299, method=3,matrix="C", write=True, nametag="_library")
+simulate(1299, method=3,matrix="C", write=True, nametag="_full")
+
+
+solve_direct(1299, matrix="C", write=True)
 
 print("\n######################### ZAD E ###########################\n")
 
-generate_simulation()
+# generate_simulation()
+#
+# plot_full_simulation(tag="log")
+# plot_full_simulation(tag="linear")
 
-
-
+plt.show()
