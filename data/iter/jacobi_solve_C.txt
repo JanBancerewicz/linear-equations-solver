@@ -1,4 +1,4 @@
-Jacobi method for N: 1299 and matrix C;	iters: 1000;	time: 1.08001
+Jacobi method for N: 1299 and matrix C;	iters: 1000;	time: 1.37855
 1.436676056644806e+123
 2.3239178457844147e+123
 3.419913943460512e+123

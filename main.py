@@ -320,6 +320,13 @@ def generate_simulation():
 # b = np.array( [np.sin(n*(np.float64(f+1))) for n in range(1, N+1)] )
 # print(f"b = {b}")
 
+### BONUS
+# C = generate_matrix(1299, 3)
+# A = generate_matrix(1299)
+#
+# print("Uwarunkowanie C:", np.linalg.cond(C))
+# print("Uwarunkowanie A:", np.linalg.cond(A))
+
 
 print("\n######################## ZAD B ###########################\n")
 norm_j, time_j = simulate(1299, method=1,matrix="A", write=True)
@@ -345,14 +352,16 @@ simulate(1299, method=3,matrix="C", write=True, nametag="_optimized")
 simulate(1299, method=3,matrix="C", write=True, nametag="_library")
 simulate(1299, method=3,matrix="C", write=True, nametag="_full")
 
-
 solve_direct(1299, matrix="C", write=True)
 
 print("\n######################### ZAD E ###########################\n")
 
-# generate_simulation()
+# # # # generate_simulation()
 #
 # plot_full_simulation(tag="log")
 # plot_full_simulation(tag="linear")
 
 plt.show()
+
+
+

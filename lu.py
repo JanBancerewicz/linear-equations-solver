@@ -6,10 +6,15 @@ import scipy.linalg
 def lu_from_library(N, A, b):
     start = time.perf_counter()
     P, L, U = scipy.linalg.lu(A)  # przeprowadzenie faktoryzacji LU za pomocą wbudowanej funkcji dla porównania z własną implementacją
+    # P, L, U = scipy.linalg.lu(A)  # przeprowadzenie faktoryzacji LU za pomocą wbudowanej funkcji dla porównania z własną implementacją
 
+    # Zastosuj permutację do wektora b: b' = P @ b
+    b_permuted = P @ b
+
+    # print("permutacja macierzy P: \n", P)
 
     # Rozwiązanie układu równań przy użyciu podstawiania w przód i wstecz
-    y = scipy.linalg.solve_triangular(L, P @ b, lower=True)
+    y = scipy.linalg.solve_triangular(L, b_permuted, lower=True)
     x = scipy.linalg.solve_triangular(U, y, lower=False)
 
 
