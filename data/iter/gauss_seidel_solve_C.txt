@@ -1,4 +1,4 @@
-Gauss_seidel method for N: 1299 and matrix C;	iters: 1000;	time: 3.68503
+Gauss_seidel method for N: 1299 and matrix C;	iters: 1000;	time: 4.02403
 1.899106885711625e+249
 3.7107448094728e+249
 6.489232022661828e+249

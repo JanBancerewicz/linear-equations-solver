@@ -163,3 +163,4 @@ cython_debug/
 .idea
 
 Projekt2_MN.pdf
+*.zip
